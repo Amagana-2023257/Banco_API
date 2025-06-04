@@ -1,0 +1,46 @@
+{
+  "name": "banca-Kinal",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "Amagana-2023257",
+  "license": "ISC",
+  "type": "module",
+  "description": "Banca en linea de Kinal",
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "cloudinary": "^2.6.1",
+    "cors": "^2.8.5",
+    "csurf": "^1.11.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "gestordeopiniones": "file:",
+    "helmet": "^8.0.0",
+    "html2canvas": "^1.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^7.0.3",
+    "pdfkit": "^0.17.1",
+    "proyectohoteleria-backend": "file:",
+    "react-hot-toast": "^2.5.2",
+    "recharts": "^2.15.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.17.0",
+    "xss-clean": "^0.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
