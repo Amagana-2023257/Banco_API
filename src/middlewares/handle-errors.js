@@ -1,7 +1,6 @@
-// src/middlewares/handleErrors.js
 import winston from 'winston';  // Para logging de errores (puedes agregar tu propia implementación de logging)
 
-// Crea un logger de Winston (o el sistema de logs que prefieras)
+// Crea un logger de Winston
 const logger = winston.createLogger({
   level: 'error',
   transports: [
@@ -23,9 +22,12 @@ const logger = winston.createLogger({
  * @param {Function} next - Función de siguiente middleware
  */
 export const handleErrors = (err, req, res, next) => {
-  // Verificar si el error tiene un código de estado y si tiene un mensaje
+  // Registrar los detalles de la solicitud antes de enviar la respuesta
+  logger.error(`Error en ${req.method} ${req.originalUrl} con body: ${JSON.stringify(req.body)}`);
+  
+  // Si el error tiene un estado y es 400 (bad request) o contiene errores
   if (err.status === 400 || err.errors) {
-    // Error de validación u otro tipo de error 400
+    logger.error('Errores de validación:', err.errors || err.message);
     return res.status(400).json({
       success: false,
       message: err.message || 'Errores en la validación de los datos.',
@@ -35,6 +37,7 @@ export const handleErrors = (err, req, res, next) => {
 
   // Errores de autenticación o autorización (401, 403)
   if (err.status === 401) {
+    logger.error('Acceso no autorizado:', err.message);
     return res.status(401).json({
       success: false,
       message: err.message || 'No autorizado. Token no válido o expirado.',
@@ -42,6 +45,7 @@ export const handleErrors = (err, req, res, next) => {
   }
 
   if (err.status === 403) {
+    logger.error('Acceso denegado:', err.message);
     return res.status(403).json({
       success: false,
       message: err.message || 'Acceso denegado. No tienes permiso para acceder a este recurso.',
@@ -50,16 +54,18 @@ export const handleErrors = (err, req, res, next) => {
 
   // Errores internos del servidor (500)
   if (err.status === 500) {
+    logger.error('Error interno del servidor:', err);
     // En producción no debemos exponer detalles del error
     if (process.env.NODE_ENV === 'production') {
-      logger.error(err); // Registrar el error en el archivo de logs
+      // Registrar el error completo en el archivo de logs
+      logger.error(err);
       return res.status(500).json({
         success: false,
         message: 'Error interno del servidor. Intenta nuevamente más tarde.',
       });
     }
 
-    // En desarrollo, proporcionar detalles del error
+    // En desarrollo, proporcionar detalles del error para depuración
     return res.status(500).json({
       success: false,
       message: err.message,
@@ -68,7 +74,7 @@ export const handleErrors = (err, req, res, next) => {
   }
 
   // Si el error no tiene un estado predefinido, respondemos con un error genérico 500
-  logger.error(err);  // Registrar el error
+  logger.error('Error desconocido:', err);
   return res.status(500).json({
     success: false,
     message: 'Error interno del servidor. Intenta nuevamente más tarde.',

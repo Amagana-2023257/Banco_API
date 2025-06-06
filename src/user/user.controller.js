@@ -61,7 +61,7 @@ export const getUserById = async (req, res) => {
  */
 export const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { email, phone, address, monthlyIncome, password } = req.body;
+  const { email, phone, address, monthlyIncome, password, username } = req.body;
 
   try {
     // Verificar si el usuario existe
@@ -93,6 +93,17 @@ export const updateUser = async (req, res) => {
       }
     }
 
+    // Si el username se cambia, verificar si ya existe
+    if (username && username !== user.username) {
+      const existingUsername = await User.findOne({ username });
+      if (existingUsername) {
+        return res.status(400).json({
+          success: false,
+          message: `El nombre de usuario ${username} ya está registrado.`
+        });
+      }
+    }
+
     // Si el teléfono se cambia, validar el formato
     if (phone && !/^\d{8}$/.test(phone)) {
       return res.status(400).json({
@@ -107,6 +118,7 @@ export const updateUser = async (req, res) => {
     user.address = address || user.address;
     user.monthlyIncome = monthlyIncome || user.monthlyIncome;
     user.password = password || user.password;
+    user.username = username || user.username;
 
     // Guardar el usuario actualizado
     const updatedUser = await user.save();

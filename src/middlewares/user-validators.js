@@ -1,3 +1,4 @@
+// src/validators/user.validators.js
 import { body, param } from 'express-validator';
 import { validarCampos } from './validate-fields.js';
 import { emailExists, usernameExists, userExists } from '../helpers/db-validators.js';
@@ -27,38 +28,41 @@ export const getUserByIdValidator = [
 // Validación para actualizar usuario
 export const updateUserValidator = [
   param('id').isMongoId().withMessage('ID de usuario inválido'),
-  
+
   // Validación de nombre
   body('name')
     .optional()
     .isString().withMessage('El nombre debe ser texto')
     .isLength({ max: 50 }).withMessage('El nombre no debe superar 50 caracteres'),
-  
+
   // Validación de apellido
   body('surname')
     .optional()
     .isString().withMessage('El apellido debe ser texto')
     .isLength({ max: 50 }).withMessage('El apellido no debe superar 50 caracteres'),
-  
+
   // Validación de email
   body('email')
     .optional()
     .isEmail().withMessage('Formato de email inválido')
     .custom(async (email) => {
       await emailExists(email);  // Verifica que el email no esté ya registrado
-    }),
+    }).withMessage('El correo ya está registrado'),
+
+  // Validación de username
+  body('username')
+    .optional()
+    .isString().withMessage('El nombre de usuario debe ser texto')
+    .isLength({ max: 50 }).withMessage('El nombre de usuario no debe superar 50 caracteres')
+    .custom(async (username) => {
+      await usernameExists(username);  // Verifica que el nombre de usuario no esté ya registrado
+    }).withMessage('El nombre de usuario ya está registrado'),
 
   // Validación de teléfono
   body('phone')
     .optional()
     .isMobilePhone('any').withMessage('Teléfono inválido'),
-  
-  // Validación de rol
-  body('role')
-    .optional()
-    .isIn(['ADMIN_GLOBAL', 'ADMIN_HOTEL', 'USER_ROLE', 'ADMIN_SERVICE'])
-    .withMessage('Rol no válido'),
-  
+
   // Validación de ingresos mensuales
   body('monthlyIncome')
     .optional()
@@ -81,26 +85,28 @@ export const registerValidator = [
   body('name')
     .notEmpty().withMessage('El nombre es requerido')
     .isLength({ max: 50 }).withMessage('El nombre no debe superar 50 caracteres'),
-  
+
   // Validación de apellido
   body('surname')
     .notEmpty().withMessage('El apellido es requerido')
     .isLength({ max: 50 }).withMessage('El apellido no debe superar 50 caracteres'),
-  
+
   // Validación de email
   body('email')
     .notEmpty().withMessage('El email es requerido')
     .isEmail().withMessage('Formato de email inválido')
     .custom(async (email) => {
       await emailExists(email);  // Verifica que el email no esté ya registrado
-    }),
+    }).withMessage('El correo ya está registrado'),
 
-  // Validación de nombre de usuario
+  // Validación de nombre de usuario (username)
   body('username')
-    .notEmpty().withMessage('El usuario es requerido')
+    .notEmpty().withMessage('El nombre de usuario es requerido')
+    .isString().withMessage('El nombre de usuario debe ser texto')
+    .isLength({ max: 50 }).withMessage('El nombre de usuario no debe superar 50 caracteres')
     .custom(async (username) => {
       await usernameExists(username);  // Verifica que el nombre de usuario no esté ya registrado
-    }),
+    }).withMessage('El nombre de usuario ya está registrado'),
 
   // Validación de contraseña
   body('password')
@@ -112,26 +118,20 @@ export const registerValidator = [
       }
       return true;
     }),
-  
+
   // Validación de teléfono (opcional)
   body('phone')
     .optional()
     .isMobilePhone('any').withMessage('Teléfono inválido'),
-  
-  // Validación de rol (opcional)
-  body('role')
-    .optional()
-    .isIn(['ADMIN_GLOBAL', 'ADMIN_HOTEL', 'USER_ROLE', 'ADMIN_SERVICE'])
-    .withMessage('Rol no válido'),
-  
+
   // Validación de ingresos mensuales
   body('monthlyIncome')
     .notEmpty().withMessage('Los ingresos mensuales son requeridos')
     .isFloat({ min: 100 }).withMessage('Los ingresos mensuales deben ser mayores a Q100'),
-  
+
   // Validación de si se envía email o username
-  requireEmailOrUsername().withMessage('Debe enviar email o username'),
-  
+  requireEmailOrUsername().withMessage('Debe enviar email o nombre de usuario'),
+
   validarCampos
 ];
 
@@ -140,17 +140,17 @@ export const loginValidator = [
   body('email')
     .optional()
     .isEmail().withMessage('Formato de email inválido'),
-  
+
   body('username')
     .optional()
-    .isString().withMessage('El usuario debe ser texto'),
+    .isString().withMessage('El nombre de usuario debe ser texto'),
 
   body('password')
     .notEmpty().withMessage('La contraseña es requerida'),
-  
+
   // Validación de si se envía email o username
-  requireEmailOrUsername().withMessage('Debe enviar email o username'),
-  
+  requireEmailOrUsername().withMessage('Debe enviar email o nombre de usuario'),
+
   validarCampos
 ];
 
@@ -159,7 +159,7 @@ export const requestPasswordResetValidator = [
   body('email')
     .notEmpty().withMessage('El email es requerido')
     .isEmail().withMessage('Formato de email inválido'),
-  
+
   validarCampos
 ];
 
@@ -168,14 +168,14 @@ export const resetPasswordValidator = [
   body('email')
     .notEmpty().withMessage('El email es requerido')
     .isEmail().withMessage('Formato de email inválido'),
-  
+
   body('code')
     .notEmpty().withMessage('El código es requerido')
     .isLength({ min: 6, max: 6 }).withMessage('El código debe tener 6 dígitos'),
-  
+
   body('newPassword')
     .notEmpty().withMessage('La nueva contraseña es requerida')
     .isLength({ min: 8 }).withMessage('La nueva contraseña debe tener al menos 8 caracteres'),
-  
+
   validarCampos
 ];

@@ -24,13 +24,10 @@ const router = Router();
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
  *             properties:
- *               profilePicture:
- *                 type: string
- *                 format: binary
  *               name:
  *                 type: string
  *               surname:

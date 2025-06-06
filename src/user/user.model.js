@@ -14,7 +14,13 @@ const userSchema = new Schema({
     maxlength: [50, 'El nombre no debe superar 50 caracteres'],
     trim: true
   },
-  nickname: {
+  surname: {
+    type: String,
+    required: [true, 'El apellido es requerido'],
+    maxlength: [50, 'El apellido no debe superar 50 caracteres'],
+    trim: true
+  },
+  username: {
     type: String,
     required: [true, 'El nombre de usuario es requerido'],
     unique: true,

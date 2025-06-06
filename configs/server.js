@@ -1,39 +1,43 @@
-// configs/server.js
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import { dbConnection } from './db.js';
-import { rateLimiter, setSecurityHeaders, xssProtection, csrfProtection } from './security.js';
+import { rateLimiter, setSecurityHeaders } from './security.js';
 import { cloudinary } from './cloudinary.js';
 import { swaggerDocs, swaggerUi } from './swagger.js';
 import { handleErrors } from '../src/middlewares/handle-errors.js';
+import cookieParser from 'cookie-parser';
 
-// Importamos el router de auth correctamente
 import AuthRoutes from '../src/auth/auth.routes.js';
 import UserRoutes from '../src/user/user.routes.js';
 
+const app = express();
+
 const middlewares = (app) => {
+  app.use(cookieParser());
   app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
+
+  app.use(cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }));
+
   app.use(morgan('dev'));
-  app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], allowedHeaders: ['Content-Type', 'Authorization'] }));
-
-  // Seguridad avanzada
-  app.use(setSecurityHeaders());  // Cabeceras HTTP seguras
-  app.use(xssProtection);         // Protección XSS
-  app.use(csrfProtection);        // Protección CSRF
-
-  app.use(rateLimiter);           // Límite de tasa de peticiones
+  app.use(setSecurityHeaders());
+  app.use(rateLimiter);
 };
 
 const routes = (app) => {
-  app.use('/hotelManager/v1/auth', AuthRoutes);  // Ahora se importa correctamente
-  app.use('/hotelManager/v1/users', UserRoutes);
+  app.use('/Banca-Kinal/v1/auth', AuthRoutes);
+  app.use('/Banca-Kinal/v1/users', UserRoutes);
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 };
 
 const handleError = (app) => {
-  app.use(handleErrors);  // Middleware para manejar los errores de manera centralizada
+  app.use(handleErrors);
 };
 
 const conectarDB = async () => {
@@ -46,7 +50,6 @@ const conectarDB = async () => {
 };
 
 export const initServer = () => {
-  const app = express();
   try {
     middlewares(app);
     conectarDB();
