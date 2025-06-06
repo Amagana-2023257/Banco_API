@@ -19,7 +19,7 @@ const middlewares = (app) => {
   app.use(express.json());
 
   app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: 'https://banca-kinal.web.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
