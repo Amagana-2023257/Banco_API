@@ -14,6 +14,11 @@ import UserRoutes from '../src/user/user.routes.js';
 const app = express();
 
 const middlewares = (app) => {
+  // 1) Habilitamos trust proxy ANTES de cualquier uso de express-rate-limit
+  //    Si tienes un solo proxy (por ejemplo Heroku, Cloud Run, AWS ELB, etc.), basta con “1”.
+  //    Si hay más capas, podrías usar `app.set('trust proxy', true)` para confiar en cualquier X-Forwarded-For.
+  app.set('trust proxy', 1);
+
   app.use(cookieParser());
   app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
@@ -27,6 +32,8 @@ const middlewares = (app) => {
 
   app.use(morgan('dev'));
   app.use(setSecurityHeaders());
+
+  // 2) Ahora sí aplicamos el rate limiter, ya con trust proxy habilitado
   app.use(rateLimiter);
 };
 
@@ -35,6 +42,9 @@ const routes = (app) => {
   app.use('/Banca-Kinal/v1/users', UserRoutes);
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 };
+
+// Si quieres evitar el “GET / 404” puedes definir una ruta raíz (opcional)
+// app.get('/', (req, res) => res.send('Servidor API está vivo'));
 
 const handleError = (app) => {
   app.use(handleErrors);
