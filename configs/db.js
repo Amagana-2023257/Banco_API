@@ -5,7 +5,8 @@ dotenv.config();
 
 export const dbConnection = async () => {
   try {
-    // Listeners (opcional, para debug)
+    // ─────────────────────────────────────────────────────────
+    // Listeners para debug en consola (opcional)
     mongoose.connection.on('connecting', () => {
       console.log('MongoDB | try connecting');
     });
@@ -22,20 +23,23 @@ export const dbConnection = async () => {
       console.log('MongoDB | could not connect to MongoDB', err);
     });
 
-    // Leer la URI desde la variable de entorno
+    // ─────────────────────────────────────────────────────────
+    // Obtenemos la URI de la variable de entorno
     const uri = process.env.URI_MONGO;
     if (!uri) {
       throw new Error('La variable de entorno URI_MONGO no está definida.');
     }
 
+    // ─────────────────────────────────────────────────────────
+    // Conexión a MongoDB Atlas (modo recommended)
     await mongoose.connect(uri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
       maxPoolSize: 50,
-      // tls: true  // no es necesario si tu URI usa "mongodb+srv://"
+      // tls: true  // no hace falta si tu URI usa "mongodb+srv://"
     });
-    // Si llega hasta aquí, la conexión fue exitosa.
+    // Si no hay excepción, está conectado correctamente
   } catch (err) {
     console.log(`Database connection failed: ${err}`);
     throw err;
