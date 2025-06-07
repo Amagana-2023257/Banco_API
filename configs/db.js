@@ -6,12 +6,10 @@ dotenv.config();
 export const dbConnection = async () => {
   try {
     const uri = process.env.URI_MONGO;
-    console.log('>>>> DEBUG: URI_MONGO es:', uri);
     if (!uri) {
       throw new Error('La variable de entorno URI_MONGO no está definida.');
     }
 
-    // Listeners opcionales para ver el estado de la conexión
     mongoose.connection.on('connecting', () => {
       console.log('MongoDB | try connecting');
     });
@@ -29,13 +27,11 @@ export const dbConnection = async () => {
     });
 
     await mongoose.connect(uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
       maxPoolSize: 50,
     });
   } catch (err) {
     console.log(`Database connection failed: ${err}`);
-    // NO HACER process.exit(1) para que el servidor siga corriendo y responda CORS
+    // no process.exit, el servidor debe seguir vivo para responder CORS
   }
 };

@@ -1,25 +1,24 @@
 // cloudinary.js
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
+import { EventEmitter } from 'events';
 
-// Cargar las variables del archivo .env
 dotenv.config();
 
-// Configuración de Cloudinary
-const cloudinaryConfig = {
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-};
+// 1) Aumentamos el límite global de listeners para evitar warnings
+EventEmitter.defaultMaxListeners = 20;
 
-console.log('Iniciando conexión a Cloudinary...');
-
-try {
-  cloudinary.config(cloudinaryConfig);
+// 2) Solo configuramos si no estaba ya configurado
+if (!cloudinary.configured) {
+  console.log('Iniciando conexión a Cloudinary...');
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
   console.log('Conexión establecida a Cloudinary');
-} catch (err) {
-  console.error('Conexión fallida a Cloudinary', err);
+  // Marcamos un flag para que no vuelva a configurarse en este proceso
+  cloudinary.configured = true;
 }
 
-// Exportar el cliente de Cloudinary configurado
 export { cloudinary };

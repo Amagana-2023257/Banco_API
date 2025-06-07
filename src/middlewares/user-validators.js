@@ -44,19 +44,13 @@ export const updateUserValidator = [
   // Validación de email
   body('email')
     .optional()
-    .isEmail().withMessage('Formato de email inválido')
-    .custom(async (email) => {
-      await emailExists(email);  // Verifica que el email no esté ya registrado
-    }).withMessage('El correo ya está registrado'),
+    .isEmail().withMessage('Formato de email inválido'),
 
   // Validación de username
   body('username')
     .optional()
     .isString().withMessage('El nombre de usuario debe ser texto')
-    .isLength({ max: 50 }).withMessage('El nombre de usuario no debe superar 50 caracteres')
-    .custom(async (username) => {
-      await usernameExists(username);  // Verifica que el nombre de usuario no esté ya registrado
-    }).withMessage('El nombre de usuario ya está registrado'),
+    .isLength({ max: 50 }).withMessage('El nombre de usuario no debe superar 50 caracteres'),
 
   // Validación de teléfono
   body('phone')

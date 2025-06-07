@@ -2,11 +2,12 @@
 import { hash, verify } from 'argon2';
 import crypto from 'crypto';
 import User from '../user/user.model.js';
+import Account from '../account/account.model.js';
 import { generateJWT } from '../helpers/generate-jwt.js';
 import { sendWelcomeEmail } from '../helpers/email-helper.js';
 
 /**
- * Registrar un nuevo usuario con validaciones de seguridad.
+ * Registrar un nuevo usuario y crear automáticamente su cuenta
  */
 export const register = async (req, res) => {
   const {
@@ -24,18 +25,18 @@ export const register = async (req, res) => {
   } = req.body;
 
   try {
-    // Verificar duplicados
+    // 1) Validar duplicados
     const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
     const existingUsername = await User.findOne({ username: username.trim() });
     const errors = [];
 
     if (existingEmail) {
-      errors.push({ message: 'El correo ya está registrado', value: email });
+      errors.push({ field: 'email', message: 'El correo ya está registrado' });
     }
     if (existingUsername) {
-      errors.push({ message: 'El nombre de usuario ya está registrado', value: username });
+      errors.push({ field: 'username', message: 'El nombre de usuario ya está en uso' });
     }
-    if (errors.length > 0) {
+    if (errors.length) {
       return res.status(400).json({
         success: false,
         message: 'Campos no válidos en la solicitud',
@@ -43,40 +44,40 @@ export const register = async (req, res) => {
       });
     }
 
-    // Validaciones adicionales
-    if (!dpi || dpi.trim().length !== 13) {
+    // 2) Validaciones adicionales
+    if (!/^[0-9]{13}$/.test(dpi.trim())) {
       return res.status(400).json({
         success: false,
-        message: 'Campos no válidos en la solicitud',
-        errors: [{ message: 'El DPI es requerido y debe tener 13 dígitos', value: dpi }],
+        message: 'El DPI debe tener 13 dígitos',
+        errors: [{ field: 'dpi', message: 'DPI inválido' }],
       });
     }
     if (!address?.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Campos no válidos en la solicitud',
-        errors: [{ message: 'La dirección es requerida', value: address }],
+        message: 'La dirección es requerida',
+        errors: [{ field: 'address', message: 'Dirección requerida' }],
       });
     }
     if (!jobName?.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Campos no válidos en la solicitud',
-        errors: [{ message: 'El nombre de trabajo es requerido', value: jobName }],
+        message: 'El nombre de trabajo es requerido',
+        errors: [{ field: 'jobName', message: 'Nombre de trabajo requerido' }],
       });
     }
     if (monthlyIncome == null || monthlyIncome < 100) {
       return res.status(400).json({
         success: false,
-        message: 'Campos no válidos en la solicitud',
-        errors: [{ message: 'El ingreso mensual debe ser mayor a Q100', value: monthlyIncome }],
+        message: 'El ingreso mensual debe ser al menos Q100',
+        errors: [{ field: 'monthlyIncome', message: 'Ingreso mensual insuficiente' }],
       });
     }
 
-    // Hash de la contraseña
+    // 3) Hash de la contraseña
     const hashedPassword = await hash(password);
 
-    // Crear usuario
+    // 4) Crear usuario
     const user = await User.create({
       name: name.trim(),
       surname: surname.trim(),
@@ -88,33 +89,43 @@ export const register = async (req, res) => {
       address: address.trim(),
       jobName: jobName.trim(),
       monthlyIncome,
-      role: role || 'USER_ROLE',
+      role: role || 'CLIENTE',
     });
 
-    // Enviar correo de bienvenida (sin bloquear registro si falla)
-    try {
-      await sendWelcomeEmail(user.email, user.name);
-    } catch (emailErr) {
-      console.error('Error al enviar correo:', emailErr);
-    }
+    // 5) Crear cuenta asociada
+    const account = await Account.create({ user: user._id, currency: 'GTQ' });
 
+    // 6) Enviar correo de bienvenida (no bloquear si falla)
+    sendWelcomeEmail(user.email, user.name).catch(err =>
+      console.error('Error al enviar correo de bienvenida:', err)
+    );
+
+    // 7) Responder con datos de usuario y cuenta
     return res.status(201).json({
       success: true,
-      message: 'Usuario registrado exitosamente',
+      message: 'Registro exitoso; cuenta creada',
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
+        surname: user.surname,
         username: user.username,
-      }
+        email: user.email,
+        role: user.role,
+      },
+      account: {
+        id: account.id,
+        accountNumber: account.accountNumber,
+        balance: account.balance,
+        currency: account.currency,
+      },
     });
   } catch (err) {
-    console.error('Error durante el registro:', err);
+    console.error('Error en registro:', err);
     if (err.name === 'ValidationError') {
-      const messages = Object.values(err.errors).map((e) => e.message);
+      const messages = Object.values(err.errors).map(e => e.message);
       return res.status(400).json({ success: false, message: 'Error de validación', errors: messages });
     }
-    return res.status(500).json({ success: false, message: 'Fallo en el registro', error: err.message });
+    return res.status(500).json({ success: false, message: 'Error en el servidor', error: err.message });
   }
 };
 
@@ -125,31 +136,56 @@ export const login = async (req, res) => {
   const { email, username, password } = req.body;
 
   try {
-    const user = await User.findOne({ $or: [{ email }, { username }] });
+    // Buscar usuario por email o username
+    const user = await User.findOne({
+      $or: [{ email: email?.toLowerCase().trim() }, { username: username?.trim() }],
+    });
     if (!user || !user.status) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Credenciales inválidas o cuenta desactivada' });
+      return res.status(400).json({
+        success: false,
+        message: 'Credenciales inválidas o cuenta desactivada',
+      });
     }
 
+    // Verificar contraseña
     const valid = await verify(user.password, password);
     if (!valid) {
-      return res.status(400).json({ success: false, message: 'Credenciales inválidas' });
+      return res.status(400).json({
+        success: false,
+        message: 'Credenciales inválidas',
+      });
     }
 
-    const userDetails = user.toJSON();
-    const token = await generateJWT(userDetails.id);
+    // Generar JWT
+    const { _id, name, role } = user;
+    const token = await generateJWT(_id.toString(), name, role);
+
+    // Construir payload de usuario seguro
+    const userPayload = {
+      id: _id.toString(),
+      name: user.name,
+      surname: user.surname,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      profilePicture: user.profilePicture,
+    };
 
     return res.status(200).json({
       success: true,
       message: 'Login exitoso',
-      userDetails: { token, user: userDetails },
+      userDetails: {
+        token,
+        user: userPayload,
+      },
     });
   } catch (err) {
     console.error('Login error:', err);
-    return res
-      .status(500)
-      .json({ success: false, message: 'Error en el servidor al iniciar sesión', error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Error en el servidor al iniciar sesión',
+      error: err.message,
+    });
   }
 };
 
@@ -222,40 +258,50 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+
 /**
- * Crear un usuario por defecto para cada rol (ejecutar una sola vez)
+ * Crear usuarios por defecto para cada rol (ejecutar una sola vez)
  */
 export const createDefaultUsers = async () => {
-  const roles = [
-    { key: 'ADMIN_GLOBAL', name: 'Super Admin Global', email: 'admin_global@correo.com' },
+  const defaultDefs = [
+    { key: 'ADMIN_GLOBAL', name: 'Super Admin Global', email: 'admin_global@banca.com', username: 'admin_global' },
+    { key: 'GERENTE_SUCURSAL', name: 'Gerente de Sucursal', email: 'gerente_sucursal@banca.com', username: 'gerente_sucursal' },
+    { key: 'CAJERO', name: 'Cajero Principal', email: 'cajero@banca.com', username: 'cajero' },
+    { key: 'CLIENTE', name: 'Cliente Base', email: 'cliente@banca.com', username: 'cliente' },
   ];
 
-  for (const { key, name, email } of roles) {
+  for (const { key, name, email, username } of defaultDefs) {
     try {
-      const exists = await User.exists({ role: key });
-      if (exists) continue;
+      const exists = await User.findOne({
+        $or: [ { role: key }, { email }, { username } ],
+      });
+      if (exists) {
+        console.log(`Usuario por defecto ${key} ya existe.`);
+        continue;
+      }
+      const pwdPlain = 'Password123!';
+      const hashedPwd = await hash(pwdPlain);
 
-      const password = 'Chinito2,000';
-      const hashedPassword = await hash(password);
-      const defaultUser = new User({
+      // Generar DPI único de 13 dígitos
+      const uniqueDpi = crypto.randomInt(1e12, 1e13 - 1).toString().padStart(13, '0');
+
+      const u = new User({
         name,
         surname: 'Default',
-        username: key.toLowerCase(),
+        username,
         email,
-        password: hashedPassword,
-        phone: '',
-        dpi: '0000000000000',
-        address: '',
-        jobName: '',
+        password: hashedPwd,
+        phone: '00000000',
+        dpi: uniqueDpi,
+        address: 'N/A',
+        jobName: `${key} Default`,
         monthlyIncome: 100,
         role: key,
-        status: true,
       });
-
-      await defaultUser.save();
-      console.log(`Usuario por defecto creado: ${key}`);
-    } catch (err) {
-      console.error(`Error creando user default ${key}:`, err);
+      await u.save();
+      console.log(`✅ Creado default user ${key} (${username}) con password: ${pwdPlain}`);
+    } catch (e) {
+      console.error(`❌ Error creando default user ${key}:`, e.message);
     }
   }
 };

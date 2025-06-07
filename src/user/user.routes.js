@@ -1,14 +1,14 @@
+// src/routes/user.routes.js
 import { Router } from 'express';
 import {
   getAllUsers,
   getUserById,
   updateUser,
   deactivateUser,
-  deleteUser
+  updateMe
 } from './user.controller.js';
 
 import {
-  getUserValidator,
   getUserByIdValidator,
   updateUserValidator,
   deleteValidator
@@ -20,172 +20,57 @@ import { hasRoles } from '../middlewares/validate-roles.js';
 const router = Router();
 
 /**
- * @swagger
- * /users:
- *   get:
- *     summary: Obtiene todos los usuarios activos (solo ADMIN_GLOBAL)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de usuarios
- *       403:
- *         description: No autorizado
+ * GET /users
+ * Obtiene todos los clientes y empleados activos (solo ADMIN_GLOBAL y GERENTE_SUCURSAL)
  */
 router.get(
-  '/users',
+  '/all',
   validateJWT,
-  hasRoles('ADMIN_GLOBAL'),
+  hasRoles('ADMIN_GLOBAL', 'GERENTE_SUCURSAL'),
   getAllUsers
 );
 
 /**
- * @swagger
- * /users/{id}:
- *   get:
- *     summary: Obtiene un usuario por ID (solo ADMIN_GLOBAL, ADMIN_HOTEL)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: Puede ser ObjectId de Mongo o "Nombre Apellido"
- *     responses:
- *       200:
- *         description: Datos del usuario
- *       403:
- *         description: No autorizado
- *       404:
- *         description: Usuario no encontrado
+ * GET /users/:id
+ * Detalle de usuario por ID (CLIENTE o empleado) — accesible para ADMIN_GLOBAL, GERENTE_SUCURSAL, y el propio CLIENTE
  */
 router.get(
-  '/users/:id',
+  '/user/:id',
   validateJWT,
-  hasRoles('ADMIN_GLOBAL', 'ADMIN_HOTEL'),
+  // Permite ADMIN_GLOBAL y GERENTE_SUCURSAL, o al propio cliente (middleware interno)
+  hasRoles('ADMIN_GLOBAL', 'GERENTE_SUCURSAL', 'CAJERO', 'CLIENTE'),
   getUserByIdValidator,
   getUserById
 );
 
 /**
- * @swagger
- * /users/update/{id}:
- *   put:
- *     summary: Actualiza datos de un usuario (solo ADMIN_GLOBAL)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ObjectId del usuario a actualizar
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               surname:
- *                 type: string
- *               email:
- *                 type: string
- *               phone:
- *                 type: string
- *               address:
- *                 type: string
- *               monthlyIncome:
- *                 type: number
- *     responses:
- *       200:
- *         description: Usuario actualizado
- *       400:
- *         description: Error de validación
- *       403:
- *         description: No autorizado
- *       404:
- *         description: Usuario no encontrado
+ * PUT /users/:id
+ * Actualiza datos de cliente/empleado — solo ADMIN_GLOBAL y GERENTE_SUCURSAL
  */
 router.put(
-  '/users/update/:id',
+  '/update/:id',
   validateJWT,
-  hasRoles('ADMIN_GLOBAL'),
+  hasRoles('ADMIN_GLOBAL', 'GERENTE_SUCURSAL'),
   updateUserValidator,
   updateUser
 );
 
 /**
- * @swagger
- * /users/deactivate/{id}:
- *   put:
- *     summary: Desactiva un usuario (solo ADMIN_GLOBAL)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ObjectId del usuario a desactivar
- *     responses:
- *       200:
- *         description: Usuario desactivado
- *       403:
- *         description: No autorizado
- *       404:
- *         description: Usuario no encontrado
+ * PUT /users/:id/deactivate
+ * Desactiva usuario (soft delete) — solo ADMIN_GLOBAL
  */
 router.put(
-  '/users/deactivate/:id',
+  '/delete/:id',
   validateJWT,
   hasRoles('ADMIN_GLOBAL'),
   deactivateUser
 );
 
-/**
- * @swagger
- * /users/delete/{id}:
- *   delete:
- *     summary: Desactiva (soft delete) un usuario (solo ADMIN_GLOBAL)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ObjectId del usuario a desactivar
- *     responses:
- *       200:
- *         description: Usuario desactivado
- *       403:
- *         description: No autorizado
- *       404:
- *         description: Usuario no encontrado
- */
-router.delete(
-  '/users/delete/:id',
+router.put(
+  '/me',
   validateJWT,
-  hasRoles('ADMIN_GLOBAL'),
-  deleteValidator,
-  deleteUser
+  updateUserValidator,  
+  updateMe
 );
 
 export default router;
-
-
-
-
