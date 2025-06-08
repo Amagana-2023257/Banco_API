@@ -8,7 +8,14 @@ import Account from '../account/account.model.js';
 export const getAllTransactions = async (req, res) => {
   try {
     const txns = await Transaction.find()
-      .populate('account', 'accountNumber balance')
+      .populate({
+        path: 'account', // Poblamos la cuenta
+        select: 'accountNumber balance', // Seleccionamos los campos que necesitamos de la cuenta
+        populate: { // Poblamos también el usuario de la cuenta
+          path: 'user',
+          select: 'username email' // Seleccionamos los campos necesarios del usuario
+        }
+      })
       .populate('relatedAccount', 'accountNumber');
     res.status(200).json({ success: true, transactions: txns });
   } catch (err) {
