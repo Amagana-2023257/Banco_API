@@ -41,7 +41,7 @@ router.post(
 router.get(
   '/all',
   validateJWT,
-  hasRoles('ADMIN_GLOBAL', 'GERENTE_SUCURSAL'),
+  hasRoles('ADMIN_GLOBAL', 'GERENTE_SUCURSAL', 'CLIENTE'),
   getAllAccounts
 );
 

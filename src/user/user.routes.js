@@ -69,7 +69,6 @@ router.put(
 router.put(
   '/me',
   validateJWT,
-  updateUserValidator,  
   updateMe
 );
 
